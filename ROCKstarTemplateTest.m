@@ -1,6 +1,6 @@
 %%  Rock* Algorithm/Task Parameters
 %                              How to use
-% 1. Set initial policy (mean and unit exploration standard deviation)
+% 1. Set initial policy (mean and unit exploration st/andard deviation)
 % 2. Fill in the name of the objective function in "functionName".
 % (save your matlab function in the same folder)
 % 3. Set "n_total_rollouts", the number of rollouts you want to evaluate. You
@@ -21,11 +21,11 @@ functionName='rosen_20';
 feval=str2func(functionName);
 
 %Misc.
-how_often_evaluate=20; %%Change if neccessary
+how_often_evaluate=20; %%Change if necessary
 
 %Strategic Parameters
 lambda=0.5;
-n_total_rollouts=2000; %%Change if neccessary
+n_total_rollouts=2000; %%Change if necessary
 lambdaMD=10;
 initial_exp=2;
 expansion_factor_sigma=1.3^(1/log(n_parameter+2.5))-1;

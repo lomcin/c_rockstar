@@ -20,11 +20,11 @@ functionName= %%fill in%% ; %%replace the function name. e.g. 'rosen_20'
 feval=str2func(functionName);
 
 %Misc.
-how_often_evaluate=5; %Not an algorithm parameter. Just to give feedback to the user
+how_often_evaluate=5; %%Change if necessary
 
 %Strategic Parameters
 lambda=0.5;
-n_total_rollouts=2000; %%Change According to your need
+n_total_rollouts=2000; %%Change if necessary
 lambdaMD=10;
 initial_exp=2;
 expansion_factor_sigma=1.3^(1/log(n_parameter+2.5))-1;
