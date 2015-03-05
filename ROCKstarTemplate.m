@@ -48,7 +48,7 @@ functionName= %%fill in%% ; %%replace the function name. e.g. 'rosen_20'
 feval=str2func(functionName);
 
 %Misc.
-how_often_evaluate=5; %%Change if necessary
+how_often_evaluate=20; %%Change if necessary
 
 %Strategic Parameters
 lambda=0.5;
@@ -62,9 +62,6 @@ imp_factor=1.3;
 covar_init=eye(n_parameter,n_parameter);
 cost2policy_cov_factor=chi2inv(0.95,n_parameter)*-0.5/log(lambda);
 covar = covar_init;
-
-% CMA parameters
-[B,D]=eig(covar);
 
 % setting global step size. This is to improve numerical stability.
 % It is a good practice to use linear scaling for all parameters since
@@ -80,14 +77,12 @@ chiN=n_parameter^0.5*(1-1/(4*n_parameter)+1/(21*n_parameter^2));
 
 %% initialization
 policy_history=zeros(n_total_rollouts,n_parameter);
-sampling_history=zeros(n_total_rollouts,n_parameter);
 cost_history=zeros(n_total_rollouts,1);
 theta_history=zeros(n_total_rollouts,n_parameter);
 theta=zeros(1,n_parameter);
-theta_history(1,:)=theta.*StandardDeviationOnEachParameters+Initial_theta;
-learning_history = [];
+theta_history(1,:)=theta.*Initial_StandardDeviation+Initial_theta;
 counter_eval=1;
-best_policy=theta.*StandardDeviationOnEachParameters+Initial_theta;
+best_policy=theta.*Initial_StandardDeviation+Initial_theta;
 best_cost=inf;
 
 data.evaluation_cost=zeros(ceil(n_total_rollouts/how_often_evaluate),2);
@@ -106,11 +101,11 @@ for iteration_n=1:n_total_rollouts
 
 if mod(iteration_n-1,how_often_evaluate)==0
    % This is not a part of algorithm but gives learning feedback to the
-   % user.
-   cost_eval = feval(theta.*StandardDeviationOnEachParameters+Initial_theta);
+   % user. Remove it if you want to speed up
+   cost_eval = feval(theta.*Initial_StandardDeviation+Initial_theta);
    data.evaluation_cost(counter_eval,1)=iteration_n-1;
    data.evaluation_cost(counter_eval,2)=cost_eval;
-   data.evaluation_policy(counter_eval,:)=theta.*StandardDeviationOnEachParameters+Initial_theta;
+   data.evaluation_policy(counter_eval,:)=theta.*Initial_StandardDeviation+Initial_theta;
    counter_eval=counter_eval+1;
    disp(sprintf('%3.0f             %.4f                  %.5f',iteration_n-1,cost_eval,sigma));
 end
@@ -120,13 +115,11 @@ end
 
   theta_eps_cur = mvnrnd(theta,covar);
   policy_history(iteration_n,:)=theta_eps_cur;
-  costs_rollouts_cur = feval(theta_eps_cur.*StandardDeviationOnEachParameters+Initial_theta);
+  costs_rollouts_cur = feval(theta_eps_cur.*Initial_StandardDeviation+Initial_theta);
   cost_history(iteration_n)=costs_rollouts_cur(1);
 
   if costs_rollouts_cur(1)<best_cost
-      prev_best_cost=best_cost;
       best_cost=costs_rollouts_cur(1);
-      prev_best_policy=best_policy;
       best_policy=theta_eps_cur;
   end
   
@@ -141,7 +134,7 @@ end
      temp_coef=1;
 
     while(1)
-      for smaple_n=1:iteration_n
+      for smaple_n=max(iteration_n-n_parameter*10,1):iteration_n
         if temp_coef*range > (policy_history(smaple_n,:)-theta)*(covar_inv)*(policy_history(smaple_n,:)-theta)'
           Near_policies(counter,:)=policy_history(smaple_n,:);
           Near_policy_costs(counter,:)=cost_history(smaple_n);
@@ -151,52 +144,43 @@ end
       if counter>min(iteration_n,2)
         break;
       end
-      temp_coef=temp_coef*2;
+      temp_coef=temp_coef*3;
       counter=1;
     end
     
     Near_policies(counter:end,:)=[];
     Near_policy_costs(counter:end) = [];
     [cur_theta_new,E_cost_theta]=gradient_descent(Near_policies, Near_policy_costs,covar_inv./cost2policy_cov_factor, theta);
-   
-   for i=1:min(length(Near_policy_costs),5)
-        [temp, IDX]=sort(Near_policy_costs);
+    [temp, IDX]=sort(Near_policy_costs);
+
+   for i=1:min(length(Near_policy_costs),1)
         [cur_theta_new2,E_cost_theta2]=gradient_descent(Near_policies, Near_policy_costs, covar_inv./cost2policy_cov_factor, Near_policies(IDX(i),:));
         if E_cost_theta2<E_cost_theta
             cur_theta_new=cur_theta_new2;
+            E_cost_theta=E_cost_theta2;
         end
-    end
+   end
     
     if costs_rollouts_cur<mean(Near_policy_costs)
         [cur_theta_new2,E_cost_theta2]=gradient_descent(Near_policies, Near_policy_costs, covar_inv./cost2policy_cov_factor, theta_eps_cur);
         if E_cost_theta2<E_cost_theta
             cur_theta_new=cur_theta_new2;
+            E_cost_theta=E_cost_theta2;
         end
     end
-
-    [dump, min_idx]=sort(Near_policy_costs);
     
-    if Near_policies(min_idx(1),:) ~=theta_eps_cur
-      [cur_theta_new2,E_cost_theta2]=gradient_descent(Near_policies, Near_policy_costs, covar_inv./cost2policy_cov_factor, Near_policies(min_idx(1),:));
-
-        if E_cost_theta2<E_cost_theta
-        cur_theta_new=cur_theta_new2;
-        end
-    
-    end
+    % Initial from the best position
     
     if min(Near_policy_costs)~=best_cost
-          [cur_theta_new2,E_cost_theta2]=gradient_descent(policy_history(1:iteration_n,:), cost_history(1:iteration_n), covar_inv./cost2policy_cov_factor, best_policy);
-
+        [cur_theta_new2,E_cost_theta2]=gradient_descent(policy_history(1:iteration_n,:), cost_history(1:iteration_n), covar_inv./cost2policy_cov_factor, best_policy);
         if E_cost_theta2<E_cost_theta
-        cur_theta_new=cur_theta_new2;
-        end
-    
+            cur_theta_new=cur_theta_new2;
+        end    
     end
     
-    theta_history(iteration_n,:)=cur_theta_new;
-        %% Covariance Matrix Adaptation
-
+    theta_history(iteration_n,:) = cur_theta_new;
+        
+    %% Covariance Matrix Adaptation
      if cost_history(iteration_n-1)>cost_history(iteration_n)
          sigma=sigma*(1+expansion_factor_sigma);
      else
@@ -204,8 +188,6 @@ end
      end
      
      if sqrt((cur_theta_new-theta)*covar_inv*(cur_theta_new-theta)')<chiN*1.5
-
-         cost2policy_cov_factor/3;
          pc=(1-cc)*pc+cc * (cur_theta_new-theta)' / sigma;
          C=(1-ccov)*C+pc*pc'*ccov;
          C=C.*(determinant/det(C)).^(1/n_parameter);
@@ -213,7 +195,6 @@ end
      
      C = triu(C) + triu(C,1)';
      covar=C.*sigma^2;
-     covar_inv=inv(covar);
      theta=cur_theta_new;
   end
   
@@ -224,4 +205,4 @@ end
 end
 save data;
 
-best_policy= best_policy.*StandardDeviationOnEachParameters+Initial_theta
+best_policy= best_policy.*Initial_StandardDeviation+Initial_theta;

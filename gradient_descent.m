@@ -62,9 +62,9 @@ function [cur_theta_new,E_temp_prev] = gradient_descent(Near_policies, Near_cost
     
     Pprior=1;
     Prev_policy=initial;
-    counter=0;
-    
-    while(1)
+    alpha=2.0*inv(2*cov_inv)/(mean_cost-min(Near_costs));
+
+    for counter=1:300
        
         % Calculate the gradient. It is an implementation of quotient rule
         % of derivative which is (adotb-bdota)/b2
@@ -79,23 +79,14 @@ function [cur_theta_new,E_temp_prev] = gradient_descent(Near_policies, Near_cost
         bdota=expMD2Residual.*(sum(expMD2.*Near_costs')+Pprior*mean_cost);
         b2=(sum(expMD2)+Pprior)^2;
         Jaco=(adotb-bdota)./b2;
-        
-        % Evaluate the policy
-        if(counter==0)
-            alpha=inv(2*cov_inv)/(mean_cost-min(Near_costs));
-        else
-            
-        end
-        Prev_Jaco_norm=norm(Jaco);
-   
-        New_Policy=Prev_policy-Jaco*alpha;
+        progressV=Jaco*alpha;
+        New_Policy=Prev_policy-progressV;
 
         % Compare and update
-        if (Jaco*alpha)*cov_inv*(Jaco*alpha)'<0.0001||(New_Policy-initial)*cov_inv*(New_Policy-initial)'>2||counter>200
+        if progressV*cov_inv*progressV'<0.0001||(New_Policy-initial)*cov_inv*(New_Policy-initial)'>2
            break
         end
         Prev_policy=New_Policy;
-         counter=counter+1;
     end
     %counter
     cur_theta_new=Prev_policy;

@@ -40,6 +40,8 @@
 % costs after "how_often_evaluate*(row_number-1)" rollouts
 % 6. The best Policy is the best policy ever evaluated.
 
+function best_cost=test_rosen()
+
 %Initial policy
 Initial_StandardDeviation= ones(1,20)*0.05 ; % initial exploration standard deviation: it is a row vector. e.g. =ones(1,10)
 Initial_theta= zeros(1,20) ; %initial Parameter: theta is a row vector. e.g. = zeros(1,10)
@@ -50,7 +52,7 @@ functionName='rosen_20';
 feval=str2func(functionName);
 
 %Misc.
-how_often_evaluate=20; %%Change if necessary
+how_often_evaluate=2000; %%Change if necessary
 
 %Strategic Parameters
 lambda=0.5;
@@ -91,10 +93,10 @@ data.evaluation_cost=zeros(ceil(n_total_rollouts/how_often_evaluate),2);
 data.evaluation_policy=zeros(ceil(n_total_rollouts/how_often_evaluate),n_parameter);
 range=chi2inv(0.95,length(theta))*lambdaMD;
 
-disp('----------------------------------')
-disp('               Rock*')
-disp('----------------------------------')
-disp('rollout      noiseless policy cost    global step size')
+% disp('----------------------------------')
+% disp('               Rock*')
+% disp('----------------------------------')
+% disp('rollout      noiseless policy cost    global step size')
 
 
 %% Rock* algorithm
@@ -109,7 +111,7 @@ if mod(iteration_n-1,how_often_evaluate)==0
    data.evaluation_cost(counter_eval,2)=cost_eval;
    data.evaluation_policy(counter_eval,:)=theta.*Initial_StandardDeviation+Initial_theta;
    counter_eval=counter_eval+1;
-   disp(sprintf('%3.0f             %.4f                  %.5f',iteration_n-1,cost_eval,sigma));
+%    disp(sprintf('%3.0f             %.4f                  %.5f',iteration_n-1,cost_eval,sigma));
 end
 
   %------------------------------------------------------------------
@@ -208,3 +210,5 @@ end
 save data;
 
 best_policy= best_policy.*Initial_StandardDeviation+Initial_theta;
+
+end

@@ -27,7 +27,7 @@
 
 %%  Rock* Algorithm/Task Parameters
 unit_exploration_noise=0.05; %Starting Noise
-how_often_evaluate=5; %Not an algorithm parameter. Just to give feedback to the user
+how_often_evaluate=20; %Not an algorithm parameter. Just to give feedback to the user
 lambda=0.5;
 n_parameter=50;
 task = task_pointmassmotion(n_parameter);
@@ -121,7 +121,7 @@ end
      temp_coef=1;
 
     while(1)
-      for smaple_n=1:iteration_n
+      for smaple_n=max(iteration_n-n_parameter*10,1):iteration_n
         if temp_coef*range > (policy_history(smaple_n,:)-theta)*(covar_inv)*(policy_history(smaple_n,:)-theta)'
           Near_policies(counter,:)=policy_history(smaple_n,:);
           Near_policy_costs(counter,:)=cost_history(smaple_n);
@@ -131,50 +131,40 @@ end
       if counter>min(iteration_n,2)
         break;
       end
-      temp_coef=temp_coef*2;
+      temp_coef=temp_coef*3;
       counter=1;
     end
     
     Near_policies(counter:end,:)=[];
     Near_policy_costs(counter:end) = [];
     [cur_theta_new,E_cost_theta]=gradient_descent(Near_policies, Near_policy_costs,covar_inv./cost2policy_cov_factor, theta);
-   
-   for i=1:min(length(Near_policy_costs),5)
-        [temp, IDX]=sort(Near_policy_costs);
+    [temp, IDX]=sort(Near_policy_costs);
+
+   for i=1:min(length(Near_policy_costs),1)
         [cur_theta_new2,E_cost_theta2]=gradient_descent(Near_policies, Near_policy_costs, covar_inv./cost2policy_cov_factor, Near_policies(IDX(i),:));
         if E_cost_theta2<E_cost_theta
             cur_theta_new=cur_theta_new2;
+            E_cost_theta=E_cost_theta2;
         end
-    end
+   end
     
     if costs_rollouts_cur<mean(Near_policy_costs)
         [cur_theta_new2,E_cost_theta2]=gradient_descent(Near_policies, Near_policy_costs, covar_inv./cost2policy_cov_factor, theta_eps_cur);
         if E_cost_theta2<E_cost_theta
             cur_theta_new=cur_theta_new2;
+            E_cost_theta=E_cost_theta2;
         end
     end
     
     % Initial from the best position
-    [dump, min_idx]=sort(Near_policy_costs);
-    
-    if Near_policies(min_idx(1),:) ~=theta_eps_cur
-      [cur_theta_new2,E_cost_theta2]=gradient_descent(Near_policies, Near_policy_costs, covar_inv./cost2policy_cov_factor, Near_policies(min_idx(1),:));
-
-        if E_cost_theta2<E_cost_theta
-        cur_theta_new=cur_theta_new2;
-        end
-    
-    end
     
     if min(Near_policy_costs)~=best_cost
-          [cur_theta_new2,E_cost_theta2]=gradient_descent(policy_history(1:iteration_n,:), cost_history(1:iteration_n), covar_inv./cost2policy_cov_factor, best_policy);
-
+        [cur_theta_new2,E_cost_theta2]=gradient_descent(policy_history(1:iteration_n,:), cost_history(1:iteration_n), covar_inv./cost2policy_cov_factor, best_policy);
         if E_cost_theta2<E_cost_theta
-        cur_theta_new=cur_theta_new2;
-        end
-    
+            cur_theta_new=cur_theta_new2;
+        end    
     end
-    
+        
     theta_history(iteration_n,:)=cur_theta_new;
         %% Covariance Matrix Adaptation
 
