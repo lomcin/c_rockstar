@@ -1,4 +1,4 @@
-%
+%%
 % Copyright (c) 2014, ADRL/ETHZ. Jemin Hwangbo
 % All rights reserved.
 %
@@ -16,8 +16,7 @@
 % THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 % ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 % WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-% DISCLAIMED. IN NO EVENT SHALL Christian Gehring, Hannes Sommer, Paul Furgale,
-% Remo Diethelm BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
+% DISCLAIMED. IN NO EVENT SHALL Jemin Hwangbo BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
 % OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
 % GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
 % HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
@@ -51,7 +50,7 @@ feval=str2func(functionName);
 how_often_evaluate=20; %%Change if necessary
 
 %Strategic Parameters
-lambda=0.5;
+lambda=0.3;
 n_total_rollouts=2000; %%Change if necessary
 lambdaMD=10;
 initial_exp=2;
@@ -79,15 +78,15 @@ chiN=n_parameter^0.5*(1-1/(4*n_parameter)+1/(21*n_parameter^2));
 policy_history=zeros(n_total_rollouts,n_parameter);
 cost_history=zeros(n_total_rollouts,1);
 theta_history=zeros(n_total_rollouts,n_parameter);
-theta=zeros(1,n_parameter);
-theta_history(1,:)=theta.*Initial_StandardDeviation+Initial_theta;
+policy=zeros(1,n_parameter);
+theta_history(1,:)=policy.*Initial_StandardDeviation+Initial_theta;
 counter_eval=1;
-best_policy=theta.*Initial_StandardDeviation+Initial_theta;
+best_policy=policy;
 best_cost=inf;
 
 data.evaluation_cost=zeros(ceil(n_total_rollouts/how_often_evaluate),2);
 data.evaluation_policy=zeros(ceil(n_total_rollouts/how_often_evaluate),n_parameter);
-range=chi2inv(0.95,length(theta))*lambdaMD;
+range=chi2inv(0.95,length(policy))*lambdaMD;
 
 disp('----------------------------------')
 disp('               Rock*')
@@ -102,10 +101,10 @@ for iteration_n=1:n_total_rollouts
 if mod(iteration_n-1,how_often_evaluate)==0
    % This is not a part of algorithm but gives learning feedback to the
    % user. Remove it if you want to speed up
-   cost_eval = feval(theta.*Initial_StandardDeviation+Initial_theta);
+   cost_eval = feval(policy.*Initial_StandardDeviation+Initial_theta);
    data.evaluation_cost(counter_eval,1)=iteration_n-1;
    data.evaluation_cost(counter_eval,2)=cost_eval;
-   data.evaluation_policy(counter_eval,:)=theta.*Initial_StandardDeviation+Initial_theta;
+   data.evaluation_policy(counter_eval,:)=policy.*Initial_StandardDeviation+Initial_theta;
    counter_eval=counter_eval+1;
    disp(sprintf('%3.0f             %.4f                  %.5f',iteration_n-1,cost_eval,sigma));
 end
@@ -113,29 +112,29 @@ end
   %------------------------------------------------------------------
   % search
 
-  theta_eps_cur = mvnrnd(theta,covar);
-  policy_history(iteration_n,:)=theta_eps_cur;
-  costs_rollouts_cur = feval(theta_eps_cur.*Initial_StandardDeviation+Initial_theta);
+  policy_eps_cur = mvnrnd(policy,covar);
+  policy_history(iteration_n,:)=policy_eps_cur;
+  costs_rollouts_cur = feval(policy_eps_cur.*Initial_StandardDeviation+Initial_theta);
   cost_history(iteration_n)=costs_rollouts_cur(1);
 
   if costs_rollouts_cur(1)<best_cost
       best_cost=costs_rollouts_cur(1);
-      best_policy=theta_eps_cur;
+      best_policy=policy_eps_cur;
   end
   
   if iteration_n>initial_exp-1
 
      covar_inv=inv(covar);
      
-     Near_policies=zeros(n_total_rollouts,length(theta_eps_cur));
+     Near_policies=zeros(n_total_rollouts,length(policy_eps_cur));
      Near_policy_costs=zeros(n_total_rollouts,1);
      
      counter=1;
      temp_coef=1;
-
+    
     while(1)
       for smaple_n=max(iteration_n-n_parameter*10,1):iteration_n
-        if temp_coef*range > (policy_history(smaple_n,:)-theta)*(covar_inv)*(policy_history(smaple_n,:)-theta)'
+        if temp_coef*range > (policy_history(smaple_n,:)-policy)*(covar_inv)*(policy_history(smaple_n,:)-policy)'
           Near_policies(counter,:)=policy_history(smaple_n,:);
           Near_policy_costs(counter,:)=cost_history(smaple_n);
           counter=counter+1;
@@ -150,52 +149,57 @@ end
     
     Near_policies(counter:end,:)=[];
     Near_policy_costs(counter:end) = [];
-    [cur_theta_new,E_cost_theta]=gradient_descent(Near_policies, Near_policy_costs,covar_inv./cost2policy_cov_factor, theta);
-    [temp, IDX]=sort(Near_policy_costs);
+    
+    [cur_policy_new,E_cost_theta]=gradient_descent(Near_policies, Near_policy_costs,covar_inv./cost2policy_cov_factor, policy);
+    
+    if counter > n_parameter * 2
+       [temp, IDX]=sort(Near_policy_costs);
 
-   for i=1:min(length(Near_policy_costs),1)
-        [cur_theta_new2,E_cost_theta2]=gradient_descent(Near_policies, Near_policy_costs, covar_inv./cost2policy_cov_factor, Near_policies(IDX(i),:));
-        if E_cost_theta2<E_cost_theta
-            cur_theta_new=cur_theta_new2;
-            E_cost_theta=E_cost_theta2;
+       for i=1:min(length(Near_policy_costs),1)
+            [cur_theta_new2,E_cost_theta2]=gradient_descent(Near_policies, Near_policy_costs, covar_inv./cost2policy_cov_factor, Near_policies(IDX(i),:));
+            if E_cost_theta2<E_cost_theta
+                cur_policy_new=cur_theta_new2;
+                E_cost_theta=E_cost_theta2;
+            end
+       end
+
+        if costs_rollouts_cur<mean(Near_policy_costs)
+            [cur_theta_new2,E_cost_theta2]=gradient_descent(Near_policies, Near_policy_costs, covar_inv./cost2policy_cov_factor, policy_eps_cur);
+            if E_cost_theta2<E_cost_theta
+                cur_policy_new=cur_theta_new2;
+                E_cost_theta=E_cost_theta2;
+            end
         end
-   end
-    
-    if costs_rollouts_cur<mean(Near_policy_costs)
-        [cur_theta_new2,E_cost_theta2]=gradient_descent(Near_policies, Near_policy_costs, covar_inv./cost2policy_cov_factor, theta_eps_cur);
-        if E_cost_theta2<E_cost_theta
-            cur_theta_new=cur_theta_new2;
-            E_cost_theta=E_cost_theta2;
+
+        % Initial from the best position
+
+        if min(Near_policy_costs)~=best_cost
+            [cur_theta_new2,E_cost_theta2]=gradient_descent(policy_history(1:iteration_n,:), cost_history(1:iteration_n), covar_inv./cost2policy_cov_factor, best_policy);
+            if E_cost_theta2<E_cost_theta
+                cur_policy_new=cur_theta_new2;
+            end    
         end
     end
-    
-    % Initial from the best position
-    
-    if min(Near_policy_costs)~=best_cost
-        [cur_theta_new2,E_cost_theta2]=gradient_descent(policy_history(1:iteration_n,:), cost_history(1:iteration_n), covar_inv./cost2policy_cov_factor, best_policy);
-        if E_cost_theta2<E_cost_theta
-            cur_theta_new=cur_theta_new2;
-        end    
-    end
-    
-    theta_history(iteration_n,:) = cur_theta_new;
+  
+    theta_history(iteration_n,:) = cur_policy_new .* Initial_StandardDeviation+Initial_theta;
         
     %% Covariance Matrix Adaptation
-     if cost_history(iteration_n-1)>cost_history(iteration_n)
-         sigma=sigma*(1+expansion_factor_sigma);
-     else
-         sigma=sigma/(1+expansion_factor_sigma)^(imp_factor);
-     end
+    if cost_history(iteration_n-1)>cost_history(iteration_n)
+        sigma=sigma*(1+expansion_factor_sigma);
+    else
+        sigma=sigma/(1+expansion_factor_sigma)^(imp_factor);
+    end
      
-     if sqrt((cur_theta_new-theta)*covar_inv*(cur_theta_new-theta)')<chiN*1.5
-         pc=(1-cc)*pc+cc * (cur_theta_new-theta)' / sigma;
-         C=(1-ccov)*C+pc*pc'*ccov;
-         C=C.*(determinant/det(C)).^(1/n_parameter);
-     end
+    if sqrt((cur_policy_new-policy)*covar_inv*(cur_policy_new-policy)')<chiN*1.5
+        pc=(1-cc)*pc + cc * (cur_policy_new-policy)' / sigma;
+        C=(1-ccov)*C+pc*pc'*ccov;
+        C=C.*(1/det(C))^(1/n_parameter);
+    end
      
-     C = triu(C) + triu(C,1)';
-     covar=C.*sigma^2;
-     theta=cur_theta_new;
+%     C = triu(C) + triu(C,1)';
+    C = (C+C').*0.5;
+    covar=C.*sigma^2;
+    policy=cur_policy_new;
   end
   
   if sigma<1e-8
@@ -205,4 +209,6 @@ end
 end
 save data;
 
-best_policy= best_policy.*Initial_StandardDeviation+Initial_theta;
+
+%% best_theta is the best policy parameter. best_policy is a normalized value which is not useful for you!!!
+best_theta= best_policy.*Initial_StandardDeviation+Initial_theta;

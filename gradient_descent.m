@@ -16,8 +16,7 @@
 % THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 % ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 % WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-% DISCLAIMED. IN NO EVENT SHALL Christian Gehring, Hannes Sommer, Paul Furgale,
-% Remo Diethelm BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
+% DISCLAIMED. IN NO EVENT SHALL Jemin Hwangbo BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
 % OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
 % GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
 % HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
@@ -52,19 +51,15 @@ function [cur_theta_new,E_temp_prev] = gradient_descent(Near_policies, Near_cost
 %
 
 
-    if length(Near_costs)<11
-        mean_cost=(max(Near_costs)+min(Near_costs))/2;
-        %mean_cost=max(Near_costs);
-    else
-        sorted=sort(Near_costs);
-        mean_cost=mean(sorted(1:5));
-    end
+
+    mean_cost=mean(Near_costs);
     
     Pprior=1;
     Prev_policy=initial;
-    alpha=2.0*inv(2*cov_inv)/(mean_cost-min(Near_costs));
+    alpha=inv(cov_inv)/(mean_cost-min(Near_costs));
 
-    for counter=1:300
+
+    for counter=1:80
        
         % Calculate the gradient. It is an implementation of quotient rule
         % of derivative which is (adotb-bdota)/b2
@@ -81,16 +76,19 @@ function [cur_theta_new,E_temp_prev] = gradient_descent(Near_policies, Near_cost
         Jaco=(adotb-bdota)./b2;
         progressV=Jaco*alpha;
         New_Policy=Prev_policy-progressV;
-
+        Prev_policy=New_Policy;
+%     progressV*cov_inv*progressV'
         % Compare and update
         if progressV*cov_inv*progressV'<0.0001||(New_Policy-initial)*cov_inv*(New_Policy-initial)'>2
            break
         end
-        Prev_policy=New_Policy;
+        
+        
     end
     %counter
     cur_theta_new=Prev_policy;
     initial_repmat=repmat(Prev_policy,length(Near_costs),1);
     diffOftheta=Near_policies-initial_repmat;
-    expMD2=exp(dot((-0.5*diffOftheta*cov_inv)',diffOftheta'));
+    expMD2=exp(dot((-0.25*diffOftheta*cov_inv)',diffOftheta'));
     E_temp_prev=(dot(expMD2,Near_costs')+mean_cost*Pprior)/(sum(expMD2)+Pprior);
+end
