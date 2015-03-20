@@ -275,9 +275,9 @@ public:
   void getBestEverSeenPolicy(Eigen::MatrixBase<Derived>& bestPolicy){
 
     if(bestPolicy.cols() == n_parameter)
-      bestPolicy     = best_policy;
+      bestPolicy     = best_policy.cwiseProduct(initial_std) + initial_theta;
     else if (bestPolicy.rows() == n_parameter)
-      bestPolicy     = best_policy.transpose();
+      bestPolicy     = (best_policy.cwiseProduct(initial_std) + initial_theta).transpose();
     else
       throw std::runtime_error("Rockstar getBestPolicy: Please input a vector (either a row vector or a column vector)");
   }
@@ -286,9 +286,9 @@ public:
   void getEstimatedOptimalPolicy(Eigen::MatrixBase<Derived>& bestPolicy){
 
     if(bestPolicy.cols() == n_parameter)
-      bestPolicy     = policy;
+      bestPolicy     = policy.cwiseProduct(initial_std) + initial_theta;
     else if (bestPolicy.rows() == n_parameter)
-      bestPolicy     = policy.transpose();
+      bestPolicy     = (policy.cwiseProduct(initial_std) + initial_theta).transpose();
     else
       throw std::runtime_error("Rockstar getEstimatedOptimalPolicy: Please input a vector (either a row vector or a column vector)");
   }
