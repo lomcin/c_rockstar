@@ -1,1 +1,0 @@
-/usr/bin/c++   -std=c++0x -O2 -g -DNDEBUG    CMakeFiles/example_Optimization.dir/example_Optimization_main.cpp.o  -o example_Optimization  -L/usr/local/lib -rdynamic -lgsl -lgslcblas -Wl,-rpath,/usr/local/lib 

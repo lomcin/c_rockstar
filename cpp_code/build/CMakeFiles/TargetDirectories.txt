@@ -1,1 +1,0 @@
-/home/jhwangbo/workspace/sl_root/c_rockstar/cpp_code/build/CMakeFiles/example_Optimization.dir
