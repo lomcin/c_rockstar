@@ -159,7 +159,7 @@ memoryAllocationLength(500000)
 	  // Strategic parameters
 	  lambda                 = 0.3;
 	  lambdaMD               = 10.0;
-	  expansion_factor_sigma = pow(1.3,(1/log(n_parameter+2.5)))-1.0;
+	  expansion_factor_sigma = pow(1.2,(1/log(n_parameter+2.5)))-1.0;
 	  imp_factor             = 1.3;
 	  nInitialRollouts_      = initial_exp;
 	  howManySamplesToCheck  = 5;

@@ -1,6 +1,7 @@
 #include <Eigen/Core>
 #include <iostream>
 #include "Rockstar.hpp"
+#include "CMAES.hpp"
 
 // rosenbrock function for testing
 double rosen(Eigen::VectorXd x){
@@ -30,12 +31,15 @@ int main(){
   Eigen::VectorXd Initial_StandardDeviation = Eigen::VectorXd::Ones(n_paramter,1) * 0.05;
   Eigen::VectorXd theta = Eigen::VectorXd::Zero(n_paramter,1);
 
-  rockstar::Rockstar optimizer(initial_theta,Initial_StandardDeviation, initial_exp);
+//  rockstar::Rockstar optimizer(initial_theta,Initial_StandardDeviation, initial_exp);
+  cmaes::CMAES optimizer(initial_theta,Initial_StandardDeviation);
 
-  for(int i=0; i<200000; i++){
+  for(int i=0; i<2000; i++){
 
     optimizer.getNextTheta2Evaluate(theta);
     double cost = rosen(theta);
+//    std::cout<<theta<<std::endl<<", cost is "<<cost<<std::endl;
+
     optimizer.setTheCostFromTheLastTheta(cost);
 
     if(i % 30 == 0)
