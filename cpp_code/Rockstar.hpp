@@ -157,7 +157,7 @@ memoryAllocationLength(500000)
     ///////////////////////////////////////////////////////////////////
 
 	  // Strategic parameters
-	  lambda                 = 0.3;
+	  lambda                 = 0.2;
 	  lambdaMD               = 10.0;
 	  expansion_factor_sigma = pow(1.2,(1/log(n_parameter+2.5)))-1.0;
 	  imp_factor             = 1.3;
@@ -305,7 +305,7 @@ private:
       for(int smaple_n = std::max(n_rolloutsEvaluated-n_parameter*howManySamplesToCheck+1,0); smaple_n <= n_rolloutsEvaluated ; smaple_n++ ){
         if(temp_coef * range > (policy_history.row(smaple_n)-policy)*covar_inv*(policy_history.row(smaple_n)-policy).transpose()){
           Near_policies.row(counter) = policy_history.row(smaple_n);
-          Near_policy_costs(counter) = cost_history(smaple_n);
+          Near_policy_costs(counter) = log(cost_history(smaple_n));
           counter=counter+1;
         }
       }
@@ -412,7 +412,7 @@ private:
     //autotune alpha according to 50% in every step criteria
     alpha = covar * cost2policy_cov_factor / (mean_cost - Near_policy_costs.block(0,0,nearBinsSize,1).minCoeff());
 
-    for(int iteration = 0; iteration < 80; iteration++){
+    for(int iteration = 0; iteration < 200; iteration++){
 
       a=Pprior*mean_cost;
       b=Pprior;
