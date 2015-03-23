@@ -329,7 +329,7 @@ private:
     int minIndex, minIndex2;
     double E_cost  = gradientDescent(cur_policy_new  , policy);
 
-    if (nearBinsSize > n_parameter * 2){
+//    if (nearBinsSize > n_parameter * 2){
       Near_policy_costs.block(0,0,nearBinsSize,1).minCoeff(&minIndex, &minIndex2);
       RowVectorNd bestWithinNearPolicies = Near_policies.row(minIndex);
       double E_cost2 = gradientDescent(cur_policy_new2 , bestWithinNearPolicies);
@@ -356,7 +356,7 @@ private:
           cur_policy_new = cur_policy_new2;
         }
       }
-    }
+//    }
 
     if(cost_history(n_rolloutsEvaluated-1)>cost_history(n_rolloutsEvaluated))
         sigma = sigma * (1.0 + expansion_factor_sigma);
@@ -404,13 +404,14 @@ private:
     RowVectorNd policy_old;
 
 
+//    Pprior        = 2.0 / pow(sqrt(2.0 * M_PI), n_parameter);
     Pprior        = 1.0;
     policy_old    = initial;
     bool terminate=false;
 
 
     //autotune alpha according to 50% in every step criteria
-    alpha = covar * cost2policy_cov_factor / (mean_cost - Near_policy_costs.block(0,0,nearBinsSize,1).minCoeff());
+    alpha = 10.0 * covar * cost2policy_cov_factor / (mean_cost - Near_policy_costs.block(0,0,nearBinsSize,1).minCoeff());
 
     for(int iteration = 0; iteration < 200; iteration++){
 
@@ -439,7 +440,7 @@ private:
       probabilistic_distance  = (update*covar_inv  *update.transpose()).sum()/ cost2policy_cov_factor;
       policy_old              = op_policy;
 
-      if(probabilistic_distance < 0.0001 || (op_policy-initial)*covar_inv / cost2policy_cov_factor *(op_policy-initial).transpose()>2.0)
+      if(probabilistic_distance < 0.0001 || (op_policy-initial)*covar_inv / cost2policy_cov_factor *(op_policy-initial).transpose()>1.0)
         terminate = true;
 
     }
