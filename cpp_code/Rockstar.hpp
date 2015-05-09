@@ -157,7 +157,7 @@ memoryAllocationLength(500000)
     ///////////////////////////////////////////////////////////////////
 
 	  // Strategic parameters
-	  lambda                 = 0.2;
+	  lambda                 = 0.1;
 	  lambdaMD               = 10.0;
 	  expansion_factor_sigma = pow(1.2,(1/log(n_parameter+2.5)))-1.0;
 	  imp_factor             = 1.3;
@@ -293,6 +293,9 @@ public:
       throw std::runtime_error("Rockstar getEstimatedOptimalPolicy: Please input a vector (either a row vector or a column vector)");
   }
 
+  VectorNd getCostHistory(){
+    return cost_history.block(0,0,n_rolloutsEvaluated-1,1);
+  }
 
 private:
 
@@ -411,7 +414,7 @@ private:
 
 
     //autotune alpha according to 50% in every step criteria
-    alpha = 10.0 * covar * cost2policy_cov_factor / (mean_cost - Near_policy_costs.block(0,0,nearBinsSize,1).minCoeff());
+    alpha = 1.5 * covar * cost2policy_cov_factor / (mean_cost - Near_policy_costs.block(0,0,nearBinsSize,1).minCoeff());
 
     for(int iteration = 0; iteration < 200; iteration++){
 
