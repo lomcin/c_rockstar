@@ -26,11 +26,11 @@
 //%
 
 /*!
-* @file 	Rockstar.hpp
-* @author 	Jemin Hwangbo
-* @date		March, 2015
-* @version 	1.0
-* @brief	Rock* - Efficient Black-Box Policy Optimization
+* @file   Rockstar.hpp
+* @author   Jemin Hwangbo
+* @date   March, 2015
+* @version  1.0
+* @brief  Rock* - Efficient Black-Box Policy Optimization
  */
 #ifndef ROCKSTAR_HPP_
 #define ROCKSTAR_HPP_
@@ -57,13 +57,13 @@ namespace rockstar {
 
 class Rockstar {
 public:
-	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-	//! column vector with the size equal to the number of policy parameters
+  //! column vector with the size equal to the number of policy parameters
   typedef Eigen::VectorXd VectorNd;
-	typedef Eigen::RowVectorXd RowVectorNd;
-	typedef Eigen::MatrixXd MatrixNd;
-	typedef Eigen::VectorXd::Index index_type;
+  typedef Eigen::RowVectorXd RowVectorNd;
+  typedef Eigen::MatrixXd MatrixNd;
+  typedef Eigen::VectorXd::Index index_type;
 
 protected:
 
@@ -119,29 +119,29 @@ protected:
 
 public:
 
-	/*! Constructor
-	 * @param initialParameterSet : initial policy parameter vector (either a column or a row vector) from where we start searching
-	 * @param std : N-dimensional vector (either a column or a row vector) of initial standard deviation on each axes
-	 * @param initial_exp : How many samples to accumulate before the first update (minimum = 2)
-	 */
+  /*! Constructor
+   * @param initialParameterSet : initial policy parameter vector (either a column or a row vector) from where we start searching
+   * @param std : N-dimensional vector (either a column or a row vector) of initial standard deviation on each axes
+   * @param initial_exp : How many samples to accumulate before the first update (minimum = 2)
+   */
 template <typename Derived>
 Rockstar(const Eigen::MatrixBase<Derived>& initialParameterSet, const Eigen::MatrixBase<Derived>& std, int initial_exp):
 isCostGivenBeforeNextTheta(true),
 optimizationDone(false),
 memoryAllocationLength(500000)
 {
-	  /////////////////////////input checking/////////////////////////
-	  ///////////////////Probably not so interesting//////////////////
-	  ////////////////////////////////////////////////////////////////
+    /////////////////////////input checking/////////////////////////
+    ///////////////////Probably not so interesting//////////////////
+    ////////////////////////////////////////////////////////////////
 
-	  if (initialParameterSet.rows() == 1)
+    if (initialParameterSet.rows() == 1)
         initial_theta = initialParameterSet;
-	  else if (initialParameterSet.cols() == 1)
-	      initial_theta = initialParameterSet.transpose();
-	  else
-	    throw std::runtime_error("Rockstar constructor: initial parameter set should either column vector or a row vector!");
+    else if (initialParameterSet.cols() == 1)
+        initial_theta = initialParameterSet.transpose();
+    else
+      throw std::runtime_error("Rockstar constructor: initial parameter set should either column vector or a row vector!");
 
-	  n_parameter = initial_theta.cols();
+    n_parameter = initial_theta.cols();
 
     if (std.rows() == 1)
       initial_std = std;
@@ -156,39 +156,39 @@ memoryAllocationLength(500000)
     ///////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////
 
-	  // Strategic parameters
-	  lambda                 = 0.1;
-	  lambdaMD               = 10.0;
-	  expansion_factor_sigma = pow(1.2,(1/log(n_parameter+2.5)))-1.0;
-	  imp_factor             = 1.3;
-	  nInitialRollouts_      = initial_exp;
-	  howManySamplesToCheck  = 5;
+    // Strategic parameters
+    lambda                 = 0.2;
+    lambdaMD               = 10.0;
+    expansion_factor_sigma = pow(1.2,(1/log(n_parameter+2.5)))-1.0;
+    imp_factor             = 1.3;
+    nInitialRollouts_      = initial_exp;
+    howManySamplesToCheck  = 5;
 
-	  covar                  = MatrixNd::Identity(n_parameter, n_parameter);
+    covar                  = MatrixNd::Identity(n_parameter, n_parameter);
     covar_inv              = MatrixNd::Identity(n_parameter, n_parameter);
-	  c_normalized           = covar;
-	  cost2policy_cov_factor = gsl_cdf_chisq_Pinv(0.95,n_parameter)*-0.5/log(lambda);
-	  sigma                  = 1.0;
-	  nearBinsSize           = 0;
+    c_normalized           = covar;
+    cost2policy_cov_factor = gsl_cdf_chisq_Pinv(0.95,n_parameter)*-0.5/log(lambda);
+    sigma                  = 1.0;
+    nearBinsSize           = 0;
 
-	  // CMA parameters
-	  determinant            = 1.0;
-	  cc                     = 3.0/(n_parameter+6)/log(n_parameter+6.0);
-	  ccov                   = 6.0/(n_parameter+7)/log(n_parameter+7.0);
-	  pc                     = VectorNd::Zero(n_parameter,1);
-	  chiN                   = pow(n_parameter,0.5)*(1.0-1.0/(4.0*n_parameter)+1.0/pow(21.0*n_parameter,2.0));
+    // CMA parameters
+    determinant            = 1.0;
+    cc                     = 3.0/(n_parameter+6)/log(n_parameter+6.0);
+    ccov                   = 6.0/(n_parameter+7)/log(n_parameter+7.0);
+    pc                     = VectorNd::Zero(n_parameter,1);
+    chiN                   = pow(n_parameter,0.5)*(1.0-1.0/(4.0*n_parameter)+1.0/pow(21.0*n_parameter,2.0));
 
-	  // initialization	 !!!policy: normalized theta, theta: unnormalized original theta. covar is normalized!!!
-	  policy_history         = MatrixNd::Zero(memoryAllocationLength,n_parameter);
-	  theta_history          = MatrixNd::Zero(memoryAllocationLength,n_parameter);
-	  cost_history           = MatrixNd::Zero(memoryAllocationLength,1);
-	  policy                 = RowVectorNd::Zero(1,n_parameter);
+    // initialization  !!!policy: normalized theta, theta: unnormalized original theta. covar is normalized!!!
+    policy_history         = MatrixNd::Zero(memoryAllocationLength,n_parameter);
+    theta_history          = MatrixNd::Zero(memoryAllocationLength,n_parameter);
+    cost_history           = MatrixNd::Zero(memoryAllocationLength,1);
+    policy                 = RowVectorNd::Zero(1,n_parameter);
     Near_policies          = MatrixNd::Zero( n_parameter * howManySamplesToCheck , n_parameter );
     Near_policy_costs      = VectorNd::Zero( n_parameter * howManySamplesToCheck , 1);
-	  theta                  = initial_theta;
-	  best_policy            = policy;
-	  best_cost              = 1.0e100;
-	  range                  = gsl_cdf_chisq_Pinv(0.95,policy.cols())*lambdaMD;
+    theta                  = initial_theta;
+    best_policy            = policy;
+    best_cost              = 1.0e100;
+    range                  = gsl_cdf_chisq_Pinv(0.95,policy.cols())*lambdaMD;
     n_rolloutsEvaluated    = 0;
 
     //initialize the random number generator
@@ -196,10 +196,10 @@ memoryAllocationLength(500000)
     rng_.seed(rand());
     gaussian_.reset(new boost::variate_generator<boost::mt19937, boost::normal_distribution<> >(rng_, normal_dist_));
 
-	}
+  }
 
-	virtual ~Rockstar() {
-	}
+  virtual ~Rockstar() {
+  }
 
 public:
 
@@ -207,13 +207,13 @@ public:
    * @param nexTheta2Evaluate : sample the next policy (either a column vector or a row vector)
    */
   template <typename Derived>
-	void getNextTheta2Evaluate(Eigen::MatrixBase<Derived>& nexTheta2Evaluate){
+  void getNextTheta2Evaluate(Eigen::MatrixBase<Derived>& nexTheta2Evaluate){
 
-	  if(!isCostGivenBeforeNextTheta)
+    if(!isCostGivenBeforeNextTheta)
       throw std::runtime_error("Rockstar getNextTheta2Evaluate: Please set the cost of the previous rollout before generating a new policy!");
 
-	  // generate random vector
-	  RowVectorNd randn(1,n_parameter);
+    // generate random vector
+    RowVectorNd randn(1,n_parameter);
 
     for(int i=0;i<n_parameter;i++)
       randn(i)=(*gaussian_)();
@@ -234,26 +234,26 @@ public:
 
     isCostGivenBeforeNextTheta              = false;
 
-	}
+  }
 
   /*! setTheCostFromTheLastTheta
    * @param cost : cost from the previous theta you got
    */
-	void setTheCostFromTheLastTheta(double cost) {
+  void setTheCostFromTheLastTheta(double cost) {
 
-	  cost_history(n_rolloutsEvaluated) = cost;
-	  isCostGivenBeforeNextTheta        = true;
+    cost_history(n_rolloutsEvaluated) = cost;
+    isCostGivenBeforeNextTheta        = true;
 
-	  if(cost<best_cost){
-	      best_cost    = cost;
-	      best_policy  = policy_history.row(n_rolloutsEvaluated);
-	  }
+    if(cost<best_cost){
+        best_cost    = cost;
+        best_policy  = policy_history.row(n_rolloutsEvaluated);
+    }
 
-	  if(n_rolloutsEvaluated>nInitialRollouts_-2)
+    if(n_rolloutsEvaluated>nInitialRollouts_-2)
       updateRegressionAndMinimum();
 
     n_rolloutsEvaluated++;
-	}
+  }
 
   bool isOptimizationDone() {
     return optimizationDone;
@@ -299,16 +299,16 @@ public:
 
 private:
 
-	void updateRegressionAndMinimum() {
+  void updateRegressionAndMinimum() {
     int counter               = 0;
     double temp_coef          = 1.0;
 
-	  //selecting policies close to the current policy
-	  while(true){
+    //selecting policies close to the current policy
+    while(true){
       for(int smaple_n = std::max(n_rolloutsEvaluated-n_parameter*howManySamplesToCheck+1,0); smaple_n <= n_rolloutsEvaluated ; smaple_n++ ){
         if(temp_coef * range > (policy_history.row(smaple_n)-policy)*covar_inv*(policy_history.row(smaple_n)-policy).transpose()){
           Near_policies.row(counter) = policy_history.row(smaple_n);
-          Near_policy_costs(counter) = log(cost_history(smaple_n));
+          Near_policy_costs(counter) = cost_history(smaple_n);
           counter=counter+1;
         }
       }
@@ -330,35 +330,19 @@ private:
 
 
     int minIndex, minIndex2;
-    double E_cost  = gradientDescent(cur_policy_new  , policy);
+    double E_cost  = 1e100;
 
-//    if (nearBinsSize > n_parameter * 2){
-      Near_policy_costs.block(0,0,nearBinsSize,1).minCoeff(&minIndex, &minIndex2);
-      RowVectorNd bestWithinNearPolicies = Near_policies.row(minIndex);
-      double E_cost2 = gradientDescent(cur_policy_new2 , bestWithinNearPolicies);
+    Sort(); /// sort near bins in order of increasing costs
 
-
+    for(int initialN = 0; initialN < std::min(1,nearBinsSize); initialN++){
+      RowVectorNd initial = Near_policies.row(initialN);
+      double E_cost2 = gradientDescent(cur_policy_new2 , initial);
       if(E_cost > E_cost2){
         cur_policy_new = cur_policy_new2;
         E_cost  = E_cost2;
       }
+    }
 
-      if(cost_history(n_rolloutsEvaluated) < Near_policy_costs.block(0,0,nearBinsSize,1).mean()){
-        E_cost2 = gradientDescent(cur_policy_new2 , policy_eps);
-
-        if(E_cost > E_cost2){
-          cur_policy_new = cur_policy_new2;
-          E_cost  = E_cost2;
-        }
-      }
-
-      if(Near_policy_costs.minCoeff() != best_cost){
-      E_cost2 = gradientDescent(cur_policy_new2 , best_policy);
-
-        if(E_cost > E_cost2){
-          cur_policy_new = cur_policy_new2;
-        }
-      }
 //    }
 
     if(cost_history(n_rolloutsEvaluated-1)>cost_history(n_rolloutsEvaluated))
@@ -384,9 +368,9 @@ private:
 
     if( sigma < 1.0e-8 )
       optimizationDone  = true;
-	}
+  }
 
-	double gradientDescent(RowVectorNd& op_policy, RowVectorNd& initial) {
+  double gradientDescent(RowVectorNd& op_policy, RowVectorNd& initial) {
 
     int rows      = nearBinsSize;
     int cols      = n_parameter;
@@ -414,7 +398,7 @@ private:
 
 
     //autotune alpha according to 50% in every step criteria
-    alpha = 1.5 * covar * cost2policy_cov_factor / (mean_cost - Near_policy_costs.block(0,0,nearBinsSize,1).minCoeff());
+    alpha = 1.0 * covar * cost2policy_cov_factor / (mean_cost - Near_policy_costs.block(0,0,nearBinsSize,1).minCoeff());
 
     for(int iteration = 0; iteration < 200; iteration++){
 
@@ -451,6 +435,33 @@ private:
     op_cost   = a/b;
     return op_cost;
     }
+
+  void Sort()
+      {
+        int i, j, flag = 1;    // set flag to 1 to start first pass
+        int numLength = nearBinsSize;
+        RowVectorNd tempV(n_parameter);
+        double temp;
+
+        for(i = 1; (i <= numLength) && flag; i++)
+        {
+          flag = 0;
+          for (j=0; j < (numLength -1); j++)
+          {
+            if (Near_policy_costs(j+1) < Near_policy_costs(j))      // ascending order simply changes to <
+            {
+              temp = Near_policy_costs(j);             // swap elements
+              Near_policy_costs(j) = Near_policy_costs(j+1);
+              Near_policy_costs(j+1) = temp;
+              flag = 1;               // indicates that a swap occurred.
+
+              tempV = Near_policies.row(j);
+              Near_policies.row(j) = Near_policies.row(j+1);
+              Near_policies.row(j+1) = tempV;
+            }
+          }
+        }
+      }
 
 };
 
